@@ -20,11 +20,13 @@ func pcwd(path, from string) {
 
 	if len(pathParts) < len(fromParts) {
 		pcolor(path, Cyan, false)
+		return
 	}
 
 	for i := range fromParts {
 		if pathParts[i] != fromParts[i] {
 			pcolor(path, Cyan, false)
+			return
 		}
 	}
 
