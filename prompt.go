@@ -1,6 +1,9 @@
 package main
 
-import "os"
+import (
+	"os"
+	"os/user"
+)
 
 func pprompt() {
 	arrowColor := White
@@ -8,5 +11,11 @@ func pprompt() {
 		arrowColor = Red
 	}
 
-	pcolor(" →  ", arrowColor, true)
+	usr, _ := user.Current()
+
+	if usr.Uid == "0" {
+		pcolor(" # ", arrowColor, true)
+	} else {
+		pcolor(" →  ", arrowColor, true)
+	}
 }
