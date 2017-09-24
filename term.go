@@ -45,7 +45,7 @@ func pcolorRst() {
 }
 
 func ptitle(title string) {
-	fmt.Printf("\x1B]2;%s\x07", title)
+	fmt.Printf("\x01\x1B]2;%s\x07\x02", title)
 }
 
 func pjobs() {
