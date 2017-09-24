@@ -148,7 +148,7 @@ func gitWtStatus() (added, modified, untracked int) {
 		}
 
 		switch l[0] {
-		case 'A':
+		case 'A', 'M', 'R', 'D':
 			added++
 		}
 	}
