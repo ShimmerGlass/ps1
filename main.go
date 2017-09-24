@@ -1,6 +1,16 @@
 package main
 
+import (
+	"fmt"
+	"os"
+)
+
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "cmd" {
+		fmt.Println("export PS1='`ps1 $? \\j`'")
+		return
+	}
+
 	defer pcolorRst()
 
 	cwd := getCwd()
@@ -22,6 +32,7 @@ func main() {
 	}
 
 	ptime()
+	pjobs()
 
 	if gitInfo.isGit {
 		gitInfo.pinfos()

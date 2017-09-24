@@ -47,3 +47,9 @@ func pcolorRst() {
 func ptitle(title string) {
 	fmt.Printf("\x1B]2;%s\x07", title)
 }
+
+func pjobs() {
+	if len(os.Args) > 2 && os.Args[2] != "0" {
+		pcolor(os.Args[2]+" ", Yellow, false)
+	}
+}
