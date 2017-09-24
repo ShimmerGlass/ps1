@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 )
 
@@ -41,4 +42,8 @@ func pcolor(s string, code colorCode, bold bool) {
 
 func pcolorRst() {
 	os.Stdout.WriteString(colorRst())
+}
+
+func ptitle(title string) {
+	fmt.Printf("\x1B]2;%s\x07", title)
 }

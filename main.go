@@ -6,12 +6,6 @@ func main() {
 	cwd := getCwd()
 	gitInfo := gitInfo(cwd)
 
-	ptime()
-
-	if gitInfo.isGit {
-		gitInfo.pinfos()
-	}
-
 	var cwdBase string
 	if gitInfo.isGit {
 		cwdBase = gitInfo.repositoryRoot
@@ -19,6 +13,20 @@ func main() {
 		cwdBase = home()
 	}
 
-	pcwd(cwd, cwdBase)
+	prettyPath := newPrettyPath(cwd, cwdBase)
+
+	if gitInfo.isGit {
+		ptitle(gitInfo.repositoryName)
+	} else {
+		ptitle(prettyPath.string())
+	}
+
+	ptime()
+
+	if gitInfo.isGit {
+		gitInfo.pinfos()
+	}
+
+	prettyPath.print()
 	pprompt()
 }
