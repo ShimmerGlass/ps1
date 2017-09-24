@@ -57,7 +57,7 @@ func (s gitStatus) pinfos() {
 		pcolor("[", Black, true)
 
 		if s.wtAdded > 0 {
-			pcolor(strconv.Itoa(s.wtAdded), Green, true)
+			pcolor(strconv.Itoa(s.wtAdded), Yellow, true)
 		}
 		if s.wtModified > 0 {
 			pcolor(strconv.Itoa(s.wtModified), Red, true)
