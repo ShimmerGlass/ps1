@@ -96,12 +96,22 @@ func gitBranch() string {
 		return res
 	}
 
-	out, err = exec.Command("git", "log", "--pretty=format:%h(%<(25,trunc)%s)", "-n", "1").Output()
+	commit, err := exec.Command("git", "log", "--pretty=format:%h", "-n", "1").Output()
 	if err != nil {
 		return "master"
 	}
 
-	return strings.TrimSpace(string(out))
+	msgb, err := exec.Command("git", "log", "--pretty=format:%s", "-n", "1").Output()
+	if err != nil {
+		return "master"
+	}
+
+	msg := strings.TrimSpace(string(msgb))
+	if len(msg) > 20 {
+		msg = msg[:20]
+	}
+
+	return strings.TrimSpace(string(commit)) + "(" + msg + ")"
 }
 
 func gitRemote() string {
