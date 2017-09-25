@@ -91,6 +91,16 @@ func gitBranch() string {
 		return "master"
 	}
 
+	res := strings.TrimSpace(string(out))
+	if res != "HEAD" {
+		return res
+	}
+
+	out, err = exec.Command("git", "log", "--pretty=format:%h(%<(25,trunc)%s)", "-n", "1").Output()
+	if err != nil {
+		return "master"
+	}
+
 	return strings.TrimSpace(string(out))
 }
 
