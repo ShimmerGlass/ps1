@@ -38,7 +38,7 @@ func (s gitStatus) pinfos() {
 	pcolor(s.branchName, branchColor, true)
 
 	if s.commitMinus > 0 || s.commitPlus > 0 {
-		pcolor("(", Black, true)
+		pcolor("(", Black, false)
 
 		if s.commitPlus > 0 {
 			pcolor("+", Green, false)
@@ -50,11 +50,11 @@ func (s gitStatus) pinfos() {
 			pcolor(strconv.Itoa(s.commitMinus), Blue, true)
 		}
 
-		pcolor(")", Black, true)
+		pcolor(")", Black, false)
 	}
 
 	if s.wtAdded > 0 || s.wtModified > 0 || s.wtUntracked > 0 {
-		pcolor("[", Black, true)
+		pcolor("[", Black, false)
 
 		if s.wtAdded > 0 {
 			pcolor(strconv.Itoa(s.wtAdded), Yellow, true)
@@ -66,7 +66,7 @@ func (s gitStatus) pinfos() {
 			pcolor(strconv.Itoa(s.wtUntracked), Purple, true)
 		}
 
-		pcolor("]", Black, true)
+		pcolor("]", Black, false)
 	}
 
 	pcolor(":", Cyan, false)
