@@ -56,15 +56,19 @@ func (s gitStatus) pinfos() {
 	if s.wtAdded > 0 || s.wtModified > 0 || s.wtUntracked > 0 {
 		pcolor("[", Black, false)
 
+		parts := []string{}
+
 		if s.wtAdded > 0 {
-			pcolor(strconv.Itoa(s.wtAdded), Yellow, true)
+			parts = append(parts, color(strconv.Itoa(s.wtAdded), Yellow, true))
 		}
 		if s.wtModified > 0 {
-			pcolor(strconv.Itoa(s.wtModified), Red, true)
+			parts = append(parts, color(strconv.Itoa(s.wtModified), Red, true))
 		}
 		if s.wtUntracked > 0 {
-			pcolor(strconv.Itoa(s.wtUntracked), Purple, true)
+			parts = append(parts, color(strconv.Itoa(s.wtUntracked), Purple, true))
 		}
+
+		fmt.Print(strings.Join(parts, " "))
 
 		pcolor("]", Black, false)
 	}
