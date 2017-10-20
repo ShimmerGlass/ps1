@@ -16,16 +16,20 @@ type prettyPath struct {
 func (p *prettyPath) print() {
 	var res string
 	if p.relative == "" {
-		res = p.abs
+		res = ""
 	} else {
 		res = "~"
-		if len(p.ok) > 0 {
-			res += "/" + strings.Join(p.ok, "/")
-		}
-		if len(p.missing) > 0 {
-			res += "/" + color(strings.Join(p.missing, "/"), Red, false)
+		if len(p.ok) > 0 || len(p.missing) > 0 {
+			res += "/"
 		}
 	}
+
+	parts := p.ok
+	for _, p := range p.missing {
+		parts = append(parts, color(p, Red, false))
+	}
+
+	res += strings.Join(parts, color("/", Cyan, false))
 
 	pcolor(res, Cyan, false)
 }
@@ -39,7 +43,8 @@ func (p *prettyPath) string() string {
 }
 
 func pathExists(p string) bool {
-	if _, err := os.Stat(p); os.IsNotExist(err) {
+	_, err := os.Stat(p)
+	if os.IsNotExist(err) {
 		return false
 	}
 
@@ -60,15 +65,19 @@ func newPrettyPath(path, from string) prettyPath {
 
 	for i := range fromParts {
 		if pathParts[i] != fromParts[i] {
-			return prettyPath
+			fromParts = []string{}
+			break
 		}
 	}
 
-	prettyPath.relative = "~"
-	if len(pathParts[len(fromParts):]) > 0 {
-		prettyPath.relative += "/" + strings.Join(pathParts[len(fromParts):], "/")
+	if len(fromParts) > 0 {
+		prettyPath.relative = "~"
+		if len(pathParts[len(fromParts):]) > 0 {
+			prettyPath.relative += "/" + strings.Join(pathParts[len(fromParts):], "/")
+		}
 	}
 
+	prettyPath.missing = pathParts
 	for i := len(pathParts); i > 0; i-- {
 		path := strings.Join(pathParts[:i], "/")
 		if pathExists(path) {
