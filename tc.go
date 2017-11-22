@@ -34,7 +34,7 @@ func tcEnvInfos(client server.TCServiceClient, pn, env string) string {
 		return ""
 	}
 
-	res := color("[", Black, false)
+	res := color("["+string(env[0]), Black, false)
 	c := Green
 	if build.State == tc.BuildStateQueued {
 		c = Cyan
@@ -46,7 +46,7 @@ func tcEnvInfos(client server.TCServiceClient, pn, env string) string {
 		c = Red
 	}
 
-	res += color(string(env[0])+strings.TrimPrefix(build.BranchName, "release-"), c, false)
+	res += color(strings.TrimPrefix(build.BranchName, "release-"), c, false)
 	res += color("]", Black, false)
 	return res
 }
