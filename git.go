@@ -73,8 +73,17 @@ func (s gitStatus) pinfos() {
 		pcolor("]", Black, false)
 	}
 
+	rn := strings.Map(func(r rune) rune {
+		switch r {
+		case 'a', 'e', 'i', 'o', 'u', 'y':
+			return -1
+		default:
+			return r
+		}
+	}, s.repositoryName)
+
 	pcolor(":", Cyan, false)
-	pcolor(s.repositoryName+" ", White, true)
+	pcolor(rn+tcInfos()+" ", White, true)
 }
 
 func isDirGit(p string) (string, bool) {

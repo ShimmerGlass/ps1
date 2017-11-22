@@ -31,7 +31,6 @@ func main() {
 		ptitle(prettyPath.string())
 	}
 
-	ptime()
 	pjobs()
 
 	if gitInfo.isGit {
