@@ -35,18 +35,20 @@ func tcEnvInfos(client server.TCServiceClient, pn, env string) string {
 	}
 
 	res := color("["+string(env[0]), Black, false)
-	c := Green
+	version := strings.TrimPrefix(build.BranchName, "release-")
+
 	if build.State == tc.BuildStateQueued {
-		c = Cyan
-	}
-	if build.State == tc.BuildStatusRunning {
-		c = Yellow
-	}
-	if build.Status != tc.BuildStatusSuccess {
-		c = Red
+		res += color(version, Cyan, false)
+	} else if build.State == tc.BuildStatusRunning {
+		p := int(build.PercentageComplete / 100 * float32(len(version)))
+		res += color(version[:p], "48;5;22m", false)
+		res += color(version[p:], Yellow, false)
+	} else if build.Status != tc.BuildStatusSuccess {
+		res += color(version, Red, false)
+	} else {
+		res += color(version, Green, false)
 	}
 
-	res += color(strings.TrimPrefix(build.BranchName, "release-"), c, false)
 	res += color("]", Black, false)
 	return res
 }
