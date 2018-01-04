@@ -35,7 +35,7 @@ func (s gitStatus) pinfos() {
 		branchColor = Yellow
 	}
 
-	pcolor(s.branchName, branchColor, true)
+	pcolor(strings.Replace(s.branchName, "release-", "r-", 1), branchColor, true)
 
 	if s.commitMinus > 0 || s.commitPlus > 0 {
 		pcolor("(", Black, false)
