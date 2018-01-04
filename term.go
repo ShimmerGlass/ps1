@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 type colorCode string
@@ -49,7 +50,12 @@ func ptitle(title string) {
 }
 
 func pjobs() {
-	if len(os.Args) > 2 && os.Args[2] != "0" {
-		pcolor(os.Args[2]+" ", Yellow, false)
+	if len(os.Args) < 3 {
+		return
+	}
+	j := strings.TrimSpace(os.Args[2])
+
+	if j != "0" {
+		pcolor(j+" ", Yellow, false)
 	}
 }
