@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -10,12 +11,17 @@ import (
 	"github.com/aestek/tc/server"
 	"github.com/aestek/tc/tc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/grpclog"
 )
+
+func init() {
+	grpclog.SetLogger(log.New(ioutil.Discard, "", 0))
+}
 
 func projectName() string {
 	dir, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
+		return ""
 	}
 
 	return path.Base(dir)
@@ -27,7 +33,7 @@ func tcEnvInfos(client server.TCServiceClient, pn, env string) string {
 		Env:     env,
 	})
 	if err != nil {
-		return ""
+		return color("[?]", Black, false)
 	}
 
 	if build == nil {
