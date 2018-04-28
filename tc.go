@@ -33,7 +33,7 @@ func tcEnvInfos(client server.TCServiceClient, pn, env string) string {
 		Env:     env,
 	})
 	if err != nil {
-		return color("[?]", Black, false)
+		return ""
 	}
 
 	if build == nil {
