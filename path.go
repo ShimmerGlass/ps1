@@ -7,39 +7,22 @@ import (
 )
 
 type prettyPath struct {
-	abs      string
-	relative string
-	ok       []string
-	missing  []string
+	ok      []string
+	missing []string
 }
 
 func (p *prettyPath) print() {
-	var res string
-	if p.relative == "" {
-		res = ""
-	} else {
-		res = "~"
-		if len(p.ok) > 0 || len(p.missing) > 0 {
-			res += "/"
-		}
-	}
-
 	parts := p.ok
 	for _, p := range p.missing {
 		parts = append(parts, color(p, Red, false))
 	}
 
-	res += strings.Join(parts, color("/", Cyan, false))
-
-	pcolor(res, Cyan, false)
+	pcolor(strings.Join(parts, color("/", Cyan, false)), Cyan, false)
 }
 
 func (p *prettyPath) string() string {
-	if len(p.relative) > 0 {
-		return p.relative
-	}
-
-	return p.abs
+	parts := append(p.ok, p.missing...)
+	return strings.Join(parts, "/")
 }
 
 func pathExists(p string) bool {
@@ -52,39 +35,25 @@ func pathExists(p string) bool {
 }
 
 func newPrettyPath(path, from string) prettyPath {
-	prettyPath := prettyPath{
-		abs: path,
-	}
+	prettyPath := prettyPath{}
 
 	pathParts := strings.Split(path, "/")
 	fromParts := strings.Split(from, "/")
 
-	if len(pathParts) < len(fromParts) {
-		return prettyPath
-	}
-
-	for i := range fromParts {
-		if pathParts[i] != fromParts[i] {
-			fromParts = []string{}
-			break
-		}
-	}
-
-	if len(fromParts) > 0 {
-		prettyPath.relative = "~"
-		if len(pathParts[len(fromParts):]) > 0 {
-			prettyPath.relative += "/" + strings.Join(pathParts[len(fromParts):], "/")
-		}
-	}
+	isRel := strings.HasPrefix(path, from)
 
 	prettyPath.missing = pathParts
 	for i := len(pathParts); i > 0; i-- {
 		path := strings.Join(pathParts[:i], "/")
 		if pathExists(path) {
-			prettyPath.ok = pathParts[len(fromParts):i]
+			prettyPath.ok = pathParts[:i]
 			prettyPath.missing = pathParts[i:]
 			break
 		}
+	}
+
+	if isRel && len(prettyPath.ok) >= len(fromParts) {
+		prettyPath.ok = append([]string{"~"}, prettyPath.ok[len(fromParts):]...)
 	}
 
 	return prettyPath
