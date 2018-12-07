@@ -17,7 +17,7 @@ var currentTerm term
 
 func init() {
 	switch {
-	case os.Getenv("ZSH_VERSION") != "":
+	case os.Getenv("ZSH_NAME") != "":
 		currentTerm = termZsh
 	default:
 		currentTerm = termBash

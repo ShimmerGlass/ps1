@@ -82,7 +82,7 @@ func (s gitStatus) pinfos() {
 		}
 	}, s.repositoryName)
 
-	pcolor(": ", Cyan, false)
+	pcolor(":", Cyan, false)
 	pcolor(rn+" ", White, true)
 }
 
