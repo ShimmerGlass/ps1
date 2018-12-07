@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"os/user"
-	"runtime"
 )
 
 func pprompt() {
@@ -16,9 +15,7 @@ func pprompt() {
 
 	if usr.Uid == "0" {
 		pcolor(" # ", arrowColor, true)
-	} else if runtime.GOOS == "darwin" {
-		pcolor(" → ", arrowColor, true)
 	} else {
-		pcolor(" →  ", arrowColor, true)
+		pcolor(" → ", arrowColor, true)
 	}
 }

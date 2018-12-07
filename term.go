@@ -6,22 +6,43 @@ import (
 	"strings"
 )
 
+type term int
+
+const (
+	termBash term = iota
+	termZsh
+)
+
+var currentTerm term
+
+func init() {
+	switch {
+	case os.Getenv("ZSH_VERSION") != "":
+		currentTerm = termZsh
+	default:
+		currentTerm = termBash
+	}
+}
+
 type colorCode string
 
 const (
-	Black  colorCode = "30m" // Black - Regular
-	Red    colorCode = "31m" // Red
-	Green  colorCode = "32m" // Green
-	Yellow colorCode = "33m" // Yellow
-	Blue   colorCode = "34m" // Blue
-	Purple colorCode = "35m" // Purple
-	Cyan   colorCode = "36m" // Cyan
-	White  colorCode = "37m" // White
+	Black  colorCode = "\x1B[%s30m"
+	Red    colorCode = "\x1B[%s31m"
+	Green  colorCode = "\x1B[%s32m"
+	Yellow colorCode = "\x1B[%s33m"
+	Blue   colorCode = "\x1B[%s34m"
+	Purple colorCode = "\x1B[%s35m"
+	Cyan   colorCode = "\x1B[%s36m"
+	White  colorCode = "\x1B[%s37m"
 
-	rst = "0m"
+	rst = "\x1B[0m"
 
-	escStart = "\x01\x1B["
-	escEnd   = "\x02"
+	escBashStart = "\x01"
+	escBashEnd   = "\x02"
+
+	escZshStart = "%{"
+	escZshEnd   = "%}"
 )
 
 func color(s string, code colorCode, bold bool) string {
@@ -30,11 +51,11 @@ func color(s string, code colorCode, bold bool) string {
 		p = "1;"
 	}
 
-	return escStart + p + string(code) + escEnd + s
+	return escStart() + fmt.Sprintf(string(code), p) + escEnd() + s
 }
 
 func colorRst() string {
-	return escStart + string(rst) + escEnd
+	return escStart() + string(rst) + escEnd()
 }
 
 func pcolor(s string, code colorCode, bold bool) {
@@ -46,7 +67,7 @@ func pcolorRst() {
 }
 
 func ptitle(title string) {
-	fmt.Printf("\x01\x1B]0;%s\x07\x02", title)
+	fmt.Printf("%s\x1B]0;%s\x07%s", escStart(), title, escEnd())
 }
 
 func pjobs() {
@@ -58,4 +79,24 @@ func pjobs() {
 	if j != "0" {
 		pcolor(j+" ", Yellow, false)
 	}
+}
+
+func escStart() string {
+	switch currentTerm {
+	case termBash:
+		return escBashStart
+	case termZsh:
+		return escZshStart
+	}
+	return ""
+}
+
+func escEnd() string {
+	switch currentTerm {
+	case termBash:
+		return escBashEnd
+	case termZsh:
+		return escZshEnd
+	}
+	return ""
 }
