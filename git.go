@@ -82,8 +82,8 @@ func (s gitStatus) pinfos() {
 		}
 	}, s.repositoryName)
 
-	pcolor(":", Cyan, false)
-	pcolor(rn+tcInfos()+" ", White, true)
+	pcolor(": ", Cyan, false)
+	pcolor(rn+" ", White, true)
 }
 
 func isDirGit(p string) (string, bool) {
