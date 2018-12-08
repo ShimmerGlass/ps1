@@ -127,8 +127,13 @@ func gitBranch() string {
 	return strings.TrimSpace(string(commit)) + "(" + msg + ")"
 }
 
-func gitRemote() string {
-	out, err := exec.Command("git", "remote").Output()
+func gitRemote(branch string) string {
+	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}").Output()
+	if err == nil {
+		return strings.TrimSpace(string(out))
+	}
+
+	out, err = exec.Command("git", "remote").Output()
 	if err != nil {
 		return ""
 	}
@@ -138,11 +143,11 @@ func gitRemote() string {
 		return ""
 	}
 
-	return lines[0]
+	return lines[0] + "/" + branch
 }
 
-func gitCommitMinus(remote, branch string) int {
-	out, err := exec.Command("git", "log", "--oneline", fmt.Sprintf("..%s/%s", remote, branch)).Output()
+func gitCommitMinus(branch string) int {
+	out, err := exec.Command("git", "log", "--oneline", fmt.Sprintf("..%s", branch)).Output()
 	if err != nil {
 		return 0
 	}
@@ -151,8 +156,8 @@ func gitCommitMinus(remote, branch string) int {
 	return len(lines) - 1
 }
 
-func gitCommitPlus(remote, branch string) int {
-	out, err := exec.Command("git", "log", "--oneline", fmt.Sprintf("%s/%s..", remote, branch)).Output()
+func gitCommitPlus(branch string) int {
+	out, err := exec.Command("git", "log", "--oneline", fmt.Sprintf("%s..", branch)).Output()
 	if err != nil {
 		return 0
 	}
@@ -206,22 +211,23 @@ func gitInfo(cwd string) gitStatus {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		remote := gitRemote()
-		status.branchName = gitBranch()
+		branch := gitBranch()
+		remoteBranch := gitRemote(branch)
+		status.branchName = branch
 
 		var wg2 sync.WaitGroup
 
 		wg2.Add(1)
 		go func() {
 			defer wg2.Done()
-			status.commitMinus = gitCommitMinus(remote, status.branchName)
+			status.commitMinus = gitCommitMinus(remoteBranch)
 
 		}()
 
 		wg2.Add(1)
 		go func() {
 			defer wg2.Done()
-			status.commitPlus = gitCommitPlus(remote, status.branchName)
+			status.commitPlus = gitCommitPlus(remoteBranch)
 		}()
 
 		wg2.Wait()
