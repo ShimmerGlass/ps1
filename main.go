@@ -38,5 +38,6 @@ func main() {
 	}
 
 	prettyPath.print()
+	pssh()
 	pprompt()
 }
