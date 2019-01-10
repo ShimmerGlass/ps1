@@ -109,6 +109,11 @@ func gitBranch() string {
 		return res
 	}
 
+	tag, err := exec.Command("git", "describe", "--exact-match", "--tags").Output()
+	if err == nil {
+		return "tag[" + strings.TrimSpace(string(tag)) + "]"
+	}
+
 	commit, err := exec.Command("git", "log", "--pretty=format:%h", "-n", "1").Output()
 	if err != nil {
 		return "master"
