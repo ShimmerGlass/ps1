@@ -26,16 +26,20 @@ type gitStatus struct {
 }
 
 func (s gitStatus) pinfos() {
-	branchColor := Green
+	branchColorS := 0.0
+	branchColorE := 360.0
 	if s.wtModified > 0 {
-		branchColor = Red
+		branchColorS = 320
+		branchColorE = 40
 	} else if s.wtUntracked > 0 {
-		branchColor = Purple
+		branchColorS = 220
+		branchColorE = 280
 	} else if s.wtAdded > 0 {
-		branchColor = Yellow
+		branchColorS = 70
+		branchColorE = 140
 	}
 
-	pcolor(strings.Replace(s.branchName, "release-", "r-", 1), branchColor, true)
+	fmt.Print(rainbow(s.branchName, 60, branchColorS, branchColorE))
 
 	if s.commitMinus > 0 || s.commitPlus > 0 {
 		pcolor("(", Black, false)
