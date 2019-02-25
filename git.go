@@ -14,7 +14,8 @@ type gitStatus struct {
 	isGit          bool
 	repositoryName string
 	repositoryRoot string
-	branchName     string
+	branchNameL    string
+	branchNameR    string
 	pathFromRoot   string
 
 	wtAdded     int
@@ -39,7 +40,7 @@ func (s gitStatus) pinfos() {
 		branchColorE = 140
 	}
 
-	fmt.Print(rainbow(s.branchName, 60, branchColorS, branchColorE))
+	fmt.Print(rainbow(s.branchNameL+" "+s.branchNameR, 60, branchColorS, branchColorE))
 
 	if s.commitMinus > 0 || s.commitPlus > 0 {
 		pcolor("(", Black, false)
@@ -102,10 +103,10 @@ func isDirGit(p string) (string, bool) {
 	return p, true
 }
 
-func gitBranch() string {
+func gitBranch() (string, string) {
 	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
 	if err != nil {
-		return "master"
+		return "", "master"
 	}
 
 	tag, _ := exec.Command("git", "describe", "--exact-match", "--tags").Output()
@@ -113,23 +114,23 @@ func gitBranch() string {
 	res := strings.TrimSpace(string(out))
 	if res != "HEAD" {
 		if string(tag) != "" {
-			res = fmt.Sprintf("tag[%s] %s", strings.TrimSpace(string(tag)), res)
+			return fmt.Sprintf("tag[%s]", strings.TrimSpace(string(tag))), res
 		}
-		return res
+		return "", res
 	}
 
 	if string(tag) != "" {
-		return fmt.Sprintf("tag[%s]", string(tag))
+		return "", fmt.Sprintf("tag[%s]", string(tag))
 	}
 
 	commit, err := exec.Command("git", "log", "--pretty=format:%h", "-n", "1").Output()
 	if err != nil {
-		return "master"
+		return "", "master"
 	}
 
 	msgb, err := exec.Command("git", "log", "--pretty=format:%s", "-n", "1").Output()
 	if err != nil {
-		return "master"
+		return "", "master"
 	}
 
 	msg := strings.TrimSpace(string(msgb))
@@ -137,7 +138,7 @@ func gitBranch() string {
 		msg = msg[:20]
 	}
 
-	return strings.TrimSpace(string(commit)) + "(" + msg + ")"
+	return "", strings.TrimSpace(string(commit)) + "(" + msg + ")"
 }
 
 func gitRemote(branch string) string {
@@ -224,9 +225,10 @@ func gitInfo(cwd string) gitStatus {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		branch := gitBranch()
-		remoteBranch := gitRemote(branch)
-		status.branchName = branch
+		branchL, branchR := gitBranch()
+		remoteBranch := gitRemote(branchR)
+		status.branchNameL = branchL
+		status.branchNameR = branchR
 
 		var wg2 sync.WaitGroup
 
