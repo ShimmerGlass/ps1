@@ -40,7 +40,7 @@ func (s gitStatus) pinfos() {
 		branchColorE = 140
 	}
 
-	fmt.Print(rainbow(s.branchNameL+" "+s.branchNameR, 60, branchColorS, branchColorE))
+	fmt.Print(rainbow(s.branchNameL+" "+s.branchNameR, 80, branchColorS, branchColorE))
 
 	if s.commitMinus > 0 || s.commitPlus > 0 {
 		pcolor("(", Black, false)
