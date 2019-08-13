@@ -109,18 +109,19 @@ func gitBranch() (string, string) {
 		return "", "master"
 	}
 
-	tag, _ := exec.Command("git", "describe", "--exact-match", "--tags").Output()
+	tagOut, _ := exec.Command("git", "describe", "--exact-match", "--tags").Output()
+	tag := strings.TrimSpace(string(tagOut))
 
 	res := strings.TrimSpace(string(out))
 	if res != "HEAD" {
-		if string(tag) != "" {
-			return fmt.Sprintf("tag[%s]", strings.TrimSpace(string(tag))), res
+		if tag != "" {
+			return fmt.Sprintf("tag[%s]", tag), res
 		}
 		return "", res
 	}
 
-	if string(tag) != "" {
-		return "", fmt.Sprintf("tag[%s]", string(tag))
+	if tag != "" {
+		return "", fmt.Sprintf("tag[%s]", tag)
 	}
 
 	commit, err := exec.Command("git", "log", "--pretty=format:%h", "-n", "1").Output()
