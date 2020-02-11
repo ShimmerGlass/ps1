@@ -35,6 +35,7 @@ func main() {
 
 	if gitInfo.isGit {
 		gitInfo.pinfos()
+		prubyVersion(gitInfo.repositoryRoot)
 	}
 
 	prettyPath.print()
