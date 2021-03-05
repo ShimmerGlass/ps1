@@ -4,7 +4,7 @@ import (
 	"os"
 )
 
-func pssh() {
+func ssh() (res []string) {
 	if os.Getenv("SSH_CLIENT") == "" {
 		return
 	}
@@ -14,6 +14,8 @@ func pssh() {
 		return
 	}
 
-	pcolor("@", Black, true)
-	pcolor(hostname, Cyan, false)
+	res = append(res,
+		color("@", Black, true)+color(hostname, Purple, false),
+	)
+	return
 }

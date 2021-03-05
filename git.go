@@ -14,8 +14,8 @@ type gitStatus struct {
 	isGit          bool
 	repositoryName string
 	repositoryRoot string
-	branchNameL    string
-	branchNameR    string
+	branch         string
+	tag            string
 	pathFromRoot   string
 
 	wtAdded     int
@@ -26,48 +26,49 @@ type gitStatus struct {
 	commitPlus  int
 }
 
-func (s gitStatus) pinfos() {
-	branchColorS := 0.0
-	branchColorE := 360.0
-	if s.wtModified > 0 {
-		branchColorS = 320
-		branchColorE = 40
-	} else if s.wtUntracked > 0 {
-		branchColorS = 220
-		branchColorE = 280
-	} else if s.wtAdded > 0 {
-		branchColorS = 70
-		branchColorE = 140
+func (s gitStatus) infos() (res []string) {
+	res = append(res,
+		color(reposName(s.repositoryName), White, true),
+		color("⁓", Black, false),
+	)
+
+	branchColor := Green
+	switch {
+	case s.wtModified > 0:
+		branchColor = Red
+	case s.wtAdded > 0:
+		branchColor = Yellow
+	case s.wtUntracked > 0:
+		branchColor = Purple
 	}
 
-	branchParts  := []string{}
-	if s.branchNameL !=  "" {
-		branchParts = append(branchParts, s.branchNameL)
+	head := ""
+	head += color(s.branch, branchColor, false)
+	if s.tag != "" {
+		head += color("#", Black, false)
+		head += color(s.tag, White, false)
 	}
-	if s.branchNameR !=  "" {
-		branchParts = append(branchParts, s.branchNameR)
-	}
-	branch := strings.Join(branchParts, " ")
-	fmt.Print(rainbow(branch, 80, branchColorS, branchColorE))
-
 	if s.commitMinus > 0 || s.commitPlus > 0 {
-		pcolor("(", Black, false)
+		head += color("{", Black, false)
 
 		if s.commitPlus > 0 {
-			pcolor("+", Green, false)
-			pcolor(strconv.Itoa(s.commitPlus), Green, true)
+			head += color("↑", Green, false)
+			head += color(strconv.Itoa(s.commitPlus), Green, true)
 		}
 
 		if s.commitMinus > 0 {
-			pcolor("-", Blue, false)
-			pcolor(strconv.Itoa(s.commitMinus), Blue, true)
+			head += color("↓", Blue, false)
+			head += color(strconv.Itoa(s.commitMinus), Blue, true)
 		}
 
-		pcolor(")", Black, false)
+		head += color("}", Black, false)
 	}
 
+	res = append(res, head)
+
+	tree := ""
 	if s.wtAdded > 0 || s.wtModified > 0 || s.wtUntracked > 0 {
-		pcolor("[", Black, false)
+		tree += color("⟨", Black, false)
 
 		parts := []string{}
 
@@ -81,22 +82,20 @@ func (s gitStatus) pinfos() {
 			parts = append(parts, color(strconv.Itoa(s.wtUntracked), Purple, true))
 		}
 
-		fmt.Print(strings.Join(parts, " "))
+		tree += strings.Join(parts, color(".", Black, false))
 
-		pcolor("]", Black, false)
+		tree += color("⟩", Black, false)
 	}
 
-	rn := strings.Map(func(r rune) rune {
-		switch r {
-		case 'a', 'e', 'i', 'o', 'u', 'y':
-			return -1
-		default:
-			return r
-		}
-	}, s.repositoryName)
+	if tree != "" {
+		res = append(res, tree)
+	}
 
-	pcolor(":", Cyan, false)
-	pcolor(rn+" ", White, true)
+	return
+}
+
+func reposName(v string) string {
+	return v
 }
 
 func isDirGit(p string) (string, bool) {
@@ -111,35 +110,25 @@ func isDirGit(p string) (string, bool) {
 	return p, true
 }
 
-func gitBranch() (string, string) {
+func gitBranch() string {
 	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
 	if err != nil {
-		return "", "master"
+		return "unknwn"
 	}
-
-	tagOut, _ := exec.Command("git", "describe", "--exact-match", "--tags").Output()
-	tag := strings.TrimSpace(string(tagOut))
 
 	res := strings.TrimSpace(string(out))
 	if res != "HEAD" {
-		if tag != "" {
-			return fmt.Sprintf("tag[%s]", tag), res
-		}
-		return "", res
-	}
-
-	if tag != "" {
-		return "", fmt.Sprintf("tag[%s]", tag)
+		return res
 	}
 
 	commit, err := exec.Command("git", "log", "--pretty=format:%h", "-n", "1").Output()
 	if err != nil {
-		return "", "master"
+		return "unknwn"
 	}
 
 	msgb, err := exec.Command("git", "log", "--pretty=format:%s", "-n", "1").Output()
 	if err != nil {
-		return "", "master"
+		return "unknwn"
 	}
 
 	msg := strings.TrimSpace(string(msgb))
@@ -147,7 +136,12 @@ func gitBranch() (string, string) {
 		msg = msg[:20]
 	}
 
-	return "", strings.TrimSpace(string(commit)) + "(" + msg + ")"
+	return strings.TrimSpace(string(commit)) + "(" + msg + ")"
+}
+
+func gitTag() string {
+	tagOut, _ := exec.Command("git", "describe", "--exact-match", "--tags").Output()
+	return strings.TrimSpace(string(tagOut))
 }
 
 func gitRemote(branch string) string {
@@ -234,10 +228,9 @@ func gitInfo(cwd string) gitStatus {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		branchL, branchR := gitBranch()
-		remoteBranch := gitRemote(branchR)
-		status.branchNameL = branchL
-		status.branchNameR = branchR
+		status.branch = gitBranch()
+		status.tag = gitTag()
+		remoteBranch := gitRemote(status.branch)
 
 		var wg2 sync.WaitGroup
 

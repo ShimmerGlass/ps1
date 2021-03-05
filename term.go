@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"strings"
 )
@@ -59,27 +58,21 @@ func colorRst() string {
 	return escStart() + string(rst) + escEnd()
 }
 
-func pcolor(s string, code colorCode, bold bool) {
-	os.Stdout.WriteString(color(s, code, bold))
+func title(title string) string {
+	return fmt.Sprintf("%s\x1B]0;%s\x07%s", escStart(), title, escEnd())
 }
 
-func pcolorRst() {
-	os.Stdout.WriteString(colorRst())
-}
-
-func ptitle(title string) {
-	fmt.Printf("%s\x1B]0;%s\x07%s", escStart(), title, escEnd())
-}
-
-func pjobs() {
+func jobs() (res []string) {
 	if len(os.Args) < 3 {
 		return
 	}
 	j := strings.TrimSpace(os.Args[2])
 
 	if j != "0" {
-		pcolor(j+" ", Yellow, false)
+		res = append(res, color(j, Yellow, false))
 	}
+
+	return
 }
 
 func escStart() string {
@@ -100,35 +93,4 @@ func escEnd() string {
 		return escZshEnd
 	}
 	return ""
-}
-
-func rainbow(s string, l, hstart, hend float64) string {
-	span := 0.0
-	if hend > hstart {
-		span = hend - hstart
-	} else {
-		span = 360 - hstart + hend
-	}
-	step := span / float64(len(s))
-
-	res := ""
-	for i, c := range s {
-		cid := 0
-		cscore := math.MaxFloat64
-		wantedH := (step*float64(i) + hstart)
-		if wantedH > 360 {
-			wantedH -= 360
-		}
-		for currentID, color := range TermCodes256 {
-			score := (math.Abs(color.H-wantedH)/360)*2 + (math.Abs(float64(color.L)-l)/100)*3 + (float64(100-color.S)/100)*3
-			if score < cscore {
-				cid = currentID
-				cscore = score
-			}
-		}
-
-		res += fmt.Sprintf("%s\x1b[38;5;%dm%s%s", escStart(), cid, escEnd(), string(c))
-	}
-
-	return res
 }

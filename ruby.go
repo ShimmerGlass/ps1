@@ -7,20 +7,22 @@ import (
 	"strings"
 )
 
-func prubyVersion(base string) {
+func rubyVersion(base string) (res []string) {
 	_, err := os.Stat(filepath.Join(base, "Gemfile"))
 	if err != nil {
 		return
 	}
 
-	out, err := exec.Command("rvm", "current").Output()
+	out, err := exec.Command("ruby", "-v").Output()
 	if err != nil {
 		return
 	}
 
-	v := strings.Replace(string(out), "ruby-", "", -1)
+	p := strings.Split(string(out), " ")
+	if len(p) < 2 {
+		return
+	}
 
-	pcolor("(rb ", Red, false)
-	pcolor(strings.TrimSpace(v), Red, true)
-	pcolor(") ", Red, false)
+	res = append(res, color(strings.TrimSpace(p[1]), Red, false))
+	return
 }

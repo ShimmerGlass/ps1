@@ -5,7 +5,7 @@ import (
 	"os/user"
 )
 
-func pprompt() {
+func prompt() (res []string) {
 	arrowColor := White
 	if len(os.Args) > 1 && os.Args[1] != "0" {
 		arrowColor = Red
@@ -14,8 +14,10 @@ func pprompt() {
 	usr, _ := user.Current()
 
 	if usr.Uid == "0" {
-		pcolor(" # ", arrowColor, true)
+		res = append(res, color("#", arrowColor, true))
 	} else {
-		pcolor(" → ", arrowColor, true)
+		res = append(res, color("➠", arrowColor, true))
 	}
+
+	return
 }

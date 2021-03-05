@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -11,7 +12,7 @@ func main() {
 		return
 	}
 
-	defer pcolorRst()
+	defer fmt.Print(colorRst())
 
 	cwd := getCwd()
 	gitInfo := gitInfo(cwd)
@@ -26,19 +27,24 @@ func main() {
 	prettyPath := newPrettyPath(cwd, cwdBase)
 
 	if gitInfo.isGit {
-		ptitle(gitInfo.repositoryName)
+		fmt.Print(title(gitInfo.repositoryName))
 	} else {
-		ptitle(prettyPath.string())
+		fmt.Print(title(prettyPath.string()))
 	}
 
-	pjobs()
+	parts := []string{}
+
+	parts = append(parts, jobs()...)
 
 	if gitInfo.isGit {
-		gitInfo.pinfos()
-		prubyVersion(gitInfo.repositoryRoot)
+		parts = append(parts, gitInfo.infos()...)
+		parts = append(parts, rubyVersion(gitInfo.repositoryRoot)...)
+		parts = append(parts, goVersion(gitInfo.repositoryRoot)...)
 	}
 
-	prettyPath.print()
-	pssh()
-	pprompt()
+	parts = append(parts, prettyPath.print()...)
+	parts = append(parts, ssh()...)
+	parts = append(parts, prompt()...)
+
+	fmt.Print(strings.Join(parts, " ") + " ")
 }
