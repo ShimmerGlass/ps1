@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -26,6 +27,20 @@ func init() {
 
 type colorCode string
 
+func (c colorCode) String() string {
+	return string(c)
+}
+
+func (c *colorCode) Set(s string) error {
+	v, err := rgbTo256(s)
+	if err != nil {
+		return err
+	}
+
+	*c = v
+	return nil
+}
+
 const (
 	Black  colorCode = "\x1B[%s30m"
 	Red    colorCode = "\x1B[%s31m"
@@ -43,6 +58,15 @@ const (
 
 	escZshStart = "%{"
 	escZshEnd   = "%}"
+)
+
+var (
+	Accent  colorCode = Cyan
+	Text    colorCode = White
+	Neutral colorCode = Black
+	Danger  colorCode = Red
+	Warning colorCode = Purple
+	Success colorCode = Green
 )
 
 func color(s string, code colorCode, bold bool) string {
@@ -63,10 +87,12 @@ func title(title string) string {
 }
 
 func jobs() (res []string) {
-	if len(os.Args) < 3 {
+	args := flag.Args()
+
+	if len(args) < 3 {
 		return
 	}
-	j := strings.TrimSpace(os.Args[2])
+	j := strings.TrimSpace(args[2])
 
 	if j != "0" {
 		res = append(res, color(j, Yellow, false))
@@ -93,4 +119,29 @@ func escEnd() string {
 		return escZshEnd
 	}
 	return ""
+}
+
+func mustRgbTo256(hex string) colorCode {
+	c, err := rgbTo256(hex)
+	if err != nil {
+		panic(err)
+	}
+
+	return c
+}
+
+func rgbTo256(hex string) (colorCode, error) {
+	var r, g, b uint8
+	_, err := fmt.Sscanf(hex, "#%02x%02x%02x", &r, &g, &b)
+	if err != nil {
+		return "", err
+	}
+
+	r = uint8((float64(r) / 255) * 5)
+	g = uint8((float64(g) / 255) * 5)
+	b = uint8((float64(b) / 255) * 5)
+
+	n := 16 + 36*r + 6*g + b
+
+	return colorCode("\x1b[%s38;5;"+fmt.Sprint(n)) + "m", nil
 }

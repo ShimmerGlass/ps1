@@ -2,15 +2,19 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
+
+	"flag"
 )
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "cmd" {
-		fmt.Println("export PS1='`ps1 $? \\j`'")
-		return
-	}
+	flag.Var(&Accent, "accent-color", "")
+	flag.Var(&Text, "text-color", "")
+	flag.Var(&Neutral, "neutral-color", "")
+	flag.Var(&Danger, "danger-color", "")
+	flag.Var(&Warning, "warning-color", "")
+	flag.Var(&Success, "success-color", "")
+	flag.Parse()
 
 	defer fmt.Print(colorRst())
 

@@ -28,14 +28,14 @@ type gitStatus struct {
 
 func (s gitStatus) infos() (res []string) {
 	res = append(res,
-		color(reposName(s.repositoryName), White, true),
-		color("⁓", Black, false),
+		color(reposName(s.repositoryName), Text, true),
+		color("∙", Neutral, false),
 	)
 
-	branchColor := Green
+	branchColor := Success
 	switch {
 	case s.wtModified > 0:
-		branchColor = Red
+		branchColor = Danger
 	case s.wtAdded > 0:
 		branchColor = Yellow
 	case s.wtUntracked > 0:
@@ -45,11 +45,11 @@ func (s gitStatus) infos() (res []string) {
 	head := ""
 	head += color(s.branch, branchColor, false)
 	if s.tag != "" {
-		head += color("#", Black, false)
-		head += color(s.tag, White, false)
+		head += color("∙", Neutral, false)
+		head += color(s.tag, Text, false)
 	}
 	if s.commitMinus > 0 || s.commitPlus > 0 {
-		head += color("{", Black, false)
+		head += color("{", Neutral, false)
 
 		if s.commitPlus > 0 {
 			head += color("↑", Green, false)
@@ -61,14 +61,14 @@ func (s gitStatus) infos() (res []string) {
 			head += color(strconv.Itoa(s.commitMinus), Blue, true)
 		}
 
-		head += color("}", Black, false)
+		head += color("}", Neutral, false)
 	}
 
 	res = append(res, head)
 
 	tree := ""
 	if s.wtAdded > 0 || s.wtModified > 0 || s.wtUntracked > 0 {
-		tree += color("⟨", Black, false)
+		tree += color("⟨", Neutral, false)
 
 		parts := []string{}
 
@@ -76,15 +76,15 @@ func (s gitStatus) infos() (res []string) {
 			parts = append(parts, color(strconv.Itoa(s.wtAdded), Yellow, true))
 		}
 		if s.wtModified > 0 {
-			parts = append(parts, color(strconv.Itoa(s.wtModified), Red, true))
+			parts = append(parts, color(strconv.Itoa(s.wtModified), Danger, true))
 		}
 		if s.wtUntracked > 0 {
 			parts = append(parts, color(strconv.Itoa(s.wtUntracked), Purple, true))
 		}
 
-		tree += strings.Join(parts, color(".", Black, false))
+		tree += strings.Join(parts, color(".", Neutral, false))
 
-		tree += color("⟩", Black, false)
+		tree += color("⟩", Neutral, false)
 	}
 
 	if tree != "" {

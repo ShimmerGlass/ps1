@@ -25,6 +25,6 @@ func goVersion(base string) (res []string) {
 
 	v := strings.Replace(p[2], "go", "", 1)
 
-	res = append(res, color(strings.TrimSpace(v), Cyan, false))
+	res = append(res, color(strings.TrimSpace(v), mustRgbTo256("#67D0DE"), false))
 	return
 }

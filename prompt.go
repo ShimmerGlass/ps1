@@ -1,14 +1,15 @@
 package main
 
 import (
-	"os"
+	"flag"
 	"os/user"
 )
 
 func prompt() (res []string) {
-	arrowColor := White
-	if len(os.Args) > 1 && os.Args[1] != "0" {
-		arrowColor = Red
+	args := flag.Args()
+	arrowColor := Accent
+	if len(args) > 1 && args[1] != "0" {
+		arrowColor = Danger
 	}
 
 	usr, _ := user.Current()
