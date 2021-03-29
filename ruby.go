@@ -23,6 +23,6 @@ func rubyVersion(base string) (res []string) {
 		return
 	}
 
-	res = append(res, color(strings.TrimSpace(p[1]), Red, false))
+	res = append(res, color(strings.TrimSpace(p[1]), mustRgbTo256("#A51401"), false))
 	return
 }

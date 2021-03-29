@@ -21,6 +21,7 @@ type gitStatus struct {
 	wtAdded     int
 	wtModified  int
 	wtUntracked int
+	wtConflict  int
 
 	commitMinus int
 	commitPlus  int
@@ -28,7 +29,7 @@ type gitStatus struct {
 
 func (s gitStatus) infos() (res []string) {
 	res = append(res,
-		color(reposName(s.repositoryName), Text, true),
+		color(reposName(s.repositoryName), Accent, true),
 		color("∙", Neutral, false),
 	)
 
@@ -52,12 +53,12 @@ func (s gitStatus) infos() (res []string) {
 		head += color("{", Neutral, false)
 
 		if s.commitPlus > 0 {
-			head += color("↑", Green, false)
+			head += color("↑", Neutral, false)
 			head += color(strconv.Itoa(s.commitPlus), Green, true)
 		}
 
 		if s.commitMinus > 0 {
-			head += color("↓", Blue, false)
+			head += color("↓", Neutral, false)
 			head += color(strconv.Itoa(s.commitMinus), Blue, true)
 		}
 
@@ -67,8 +68,8 @@ func (s gitStatus) infos() (res []string) {
 	res = append(res, head)
 
 	tree := ""
-	if s.wtAdded > 0 || s.wtModified > 0 || s.wtUntracked > 0 {
-		tree += color("⟨", Neutral, false)
+	if s.wtAdded > 0 || s.wtModified > 0 || s.wtUntracked > 0 || s.wtConflict > 0 {
+		tree += color("{", Neutral, false)
 
 		parts := []string{}
 
@@ -81,10 +82,13 @@ func (s gitStatus) infos() (res []string) {
 		if s.wtUntracked > 0 {
 			parts = append(parts, color(strconv.Itoa(s.wtUntracked), Purple, true))
 		}
+		if s.wtConflict > 0 {
+			parts = append(parts, color(strconv.Itoa(s.wtConflict), Blue, true))
+		}
 
 		tree += strings.Join(parts, color(".", Neutral, false))
 
-		tree += color("⟩", Neutral, false)
+		tree += color("}", Neutral, false)
 	}
 
 	if tree != "" {
@@ -183,16 +187,23 @@ func gitCommitPlus(branch string) int {
 	return len(lines) - 1
 }
 
-func gitWtStatus() (added, modified, untracked int) {
+func gitWtStatus() (added, modified, untracked, conflict int) {
 	out, err := exec.Command("git", "status", "--porcelain").Output()
 	if err != nil {
 		return
 	}
 
 	lines := strings.Split(string(out), "\n")
+NextLine:
 	for _, l := range lines {
 		if len(l) < 2 {
 			continue
+		}
+
+		switch l[:2] {
+		case "UU":
+			conflict++
+			continue NextLine
 		}
 
 		switch l[1] {
@@ -254,7 +265,7 @@ func gitInfo(cwd string) gitStatus {
 	go func() {
 		defer wg.Done()
 
-		status.wtAdded, status.wtModified, status.wtUntracked = gitWtStatus()
+		status.wtAdded, status.wtModified, status.wtUntracked, status.wtConflict = gitWtStatus()
 	}()
 
 	wg.Wait()
