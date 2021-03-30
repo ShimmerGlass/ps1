@@ -87,14 +87,9 @@ func title(title string) string {
 }
 
 func jobs() (res []string) {
-	args := flag.Args()
+	j := strings.TrimSpace(flag.Arg(1))
 
-	if len(args) < 3 {
-		return
-	}
-	j := strings.TrimSpace(args[2])
-
-	if j != "0" {
+	if j != "0" && j != "" {
 		res = append(res, color(j, Yellow, false))
 	}
 
