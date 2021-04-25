@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/user"
 	"strings"
+	"time"
 )
 
 type prettyPath struct {
@@ -36,6 +37,8 @@ func pathExists(p string) bool {
 }
 
 func newPrettyPath(path, from string) prettyPath {
+	defer measure("path", time.Now())
+
 	prettyPath := prettyPath{}
 
 	pathParts := strings.Split(path, "/")
@@ -61,6 +64,8 @@ func newPrettyPath(path, from string) prettyPath {
 }
 
 func getCwd() string {
+	defer measure("cwd", time.Now())
+
 	cwd, ok := os.LookupEnv("PWD")
 	if ok {
 		return cwd
@@ -75,6 +80,8 @@ func getCwd() string {
 }
 
 func home() string {
+	defer measure("home", time.Now())
+
 	usr, _ := user.Current()
 	return usr.HomeDir
 }

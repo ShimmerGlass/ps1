@@ -7,6 +7,8 @@ import (
 	"flag"
 )
 
+var why bool
+
 func main() {
 	flag.Var(&Accent, "accent-color", "")
 	flag.Var(&Text, "text-color", "")
@@ -14,9 +16,12 @@ func main() {
 	flag.Var(&Danger, "danger-color", "")
 	flag.Var(&Warning, "warning-color", "")
 	flag.Var(&Success, "success-color", "")
+	flag.BoolVar(&why, "why", false, "Debug performance")
 	flag.Parse()
 
-	defer fmt.Print(colorRst())
+	if !why {
+		defer fmt.Print(colorRst())
+	}
 
 	cwd := getCwd()
 	gitInfo := gitInfo(cwd)
@@ -30,10 +35,12 @@ func main() {
 
 	prettyPath := newPrettyPath(cwd, cwdBase)
 
-	if gitInfo.isGit {
-		fmt.Print(title(gitInfo.repositoryName))
-	} else {
-		fmt.Print(title(prettyPath.string()))
+	if !why {
+		if gitInfo.isGit {
+			fmt.Print(title(gitInfo.repositoryName))
+		} else {
+			fmt.Print(title(prettyPath.string()))
+		}
 	}
 
 	parts := []string{}
@@ -50,5 +57,9 @@ func main() {
 	parts = append(parts, ssh()...)
 	parts = append(parts, prompt()...)
 
-	fmt.Print(strings.Join(parts, " ") + " ")
+	if !why {
+		fmt.Print(strings.Join(parts, " ") + " ")
+	} else {
+		printDebugTimes()
+	}
 }

@@ -2,9 +2,12 @@ package main
 
 import (
 	"os"
+	"time"
 )
 
 func ssh() (res []string) {
+	defer measure("ssh", time.Now())
+
 	if os.Getenv("SSH_CLIENT") == "" {
 		return
 	}

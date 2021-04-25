@@ -5,9 +5,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func goVersion(base string) (res []string) {
+	defer measure("go", time.Now())
+
 	_, err := os.Stat(filepath.Join(base, "go.mod"))
 	if err != nil {
 		return

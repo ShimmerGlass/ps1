@@ -5,9 +5,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func rubyVersion(base string) (res []string) {
+	defer measure("ruby", time.Now())
+
 	_, err := os.Stat(filepath.Join(base, "Gemfile"))
 	if err != nil {
 		return

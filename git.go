@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type gitStatus struct {
@@ -115,6 +116,8 @@ func isDirGit(p string) (string, bool) {
 }
 
 func gitBranch() string {
+	defer measure("git branch", time.Now())
+
 	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
 	if err != nil {
 		return "unknwn"
@@ -144,11 +147,15 @@ func gitBranch() string {
 }
 
 func gitTag() string {
+	defer measure("git tag", time.Now())
+
 	tagOut, _ := exec.Command("git", "describe", "--exact-match", "--tags").Output()
 	return strings.TrimSpace(string(tagOut))
 }
 
 func gitRemote(branch string) string {
+	defer measure("git remote", time.Now())
+
 	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}").Output()
 	if err == nil {
 		return strings.TrimSpace(string(out))
@@ -168,6 +175,8 @@ func gitRemote(branch string) string {
 }
 
 func gitCommitMinus(branch string) int {
+	defer measure("git commit-", time.Now())
+
 	out, err := exec.Command("git", "log", "--oneline", fmt.Sprintf("..%s", branch)).Output()
 	if err != nil {
 		return 0
@@ -178,6 +187,8 @@ func gitCommitMinus(branch string) int {
 }
 
 func gitCommitPlus(branch string) int {
+	defer measure("git commit+", time.Now())
+
 	out, err := exec.Command("git", "log", "--oneline", fmt.Sprintf("%s..", branch)).Output()
 	if err != nil {
 		return 0
@@ -188,6 +199,8 @@ func gitCommitPlus(branch string) int {
 }
 
 func gitWtStatus() (added, modified, untracked, conflict int) {
+	defer measure("git status", time.Now())
+
 	out, err := exec.Command("git", "status", "--porcelain").Output()
 	if err != nil {
 		return
@@ -223,6 +236,8 @@ NextLine:
 }
 
 func gitInfo(cwd string) gitStatus {
+	defer measure("git", time.Now())
+
 	status := gitStatus{}
 
 	repPath, isGit := isDirGit(cwd)

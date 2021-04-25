@@ -3,9 +3,12 @@ package main
 import (
 	"flag"
 	"os/user"
+	"time"
 )
 
 func prompt() (res []string) {
+	defer measure("prompt", time.Now())
+
 	arrowColor := Accent
 	if flag.Arg(0) != "0" {
 		arrowColor = Danger
