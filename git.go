@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -146,8 +147,20 @@ func gitBranch() string {
 	return strings.TrimSpace(string(commit)) + "(" + msg + ")"
 }
 
-func gitTag() string {
+func gitTag(repPath string) string {
 	defer measure("git tag", time.Now())
+
+	f, err := os.Open(filepath.Join(repPath, ".git/refs/tags"))
+	if err != nil {
+		return ""
+	}
+	entries, err := f.ReadDir(100)
+	if err != nil {
+		return ""
+	}
+	if len(entries) == 100 {
+		return "?"
+	}
 
 	tagOut, _ := exec.Command("git", "describe", "--exact-match", "--tags").Output()
 	return strings.TrimSpace(string(tagOut))
@@ -255,7 +268,7 @@ func gitInfo(cwd string) gitStatus {
 	go func() {
 		defer wg.Done()
 		status.branch = gitBranch()
-		status.tag = gitTag()
+		status.tag = gitTag(repPath)
 		remoteBranch := gitRemote(status.branch)
 
 		var wg2 sync.WaitGroup
