@@ -12,13 +12,18 @@ import (
 	"time"
 )
 
+type repos struct {
+	name    string
+	root    string
+	gitPath string
+}
+
 type gitStatus struct {
-	isGit          bool
-	repositoryName string
-	repositoryRoot string
-	branch         string
-	tag            string
-	pathFromRoot   string
+	isGit        bool
+	repos        []repos
+	branch       string
+	tag          string
+	pathFromRoot string
 
 	wtAdded     int
 	wtModified  int
@@ -30,8 +35,13 @@ type gitStatus struct {
 }
 
 func (s gitStatus) infos() (res []string) {
+	names := []string{}
+	for _, r := range s.repos {
+		names = append(names, color(r.name, Accent, true))
+	}
+
 	res = append(res,
-		color(reposName(s.repositoryName), Accent, true),
+		strings.Join(names, color("/", Neutral, false)),
 		color("∙", Neutral, false),
 	)
 
@@ -100,20 +110,47 @@ func (s gitStatus) infos() (res []string) {
 	return
 }
 
-func reposName(v string) string {
-	return v
-}
+func (s *gitStatus) fillRepos(p string) {
+	s.isGit = false
 
-func isDirGit(p string) (string, bool) {
-	if _, err := os.Stat(path.Join(p, ".git")); os.IsNotExist(err) {
-		parent := path.Dir(p)
-		if parent == p {
-			return "", false
+	for {
+		gitPath := path.Join(p, ".git")
+		stat, err := os.Stat(gitPath)
+		if os.IsNotExist(err) {
+			parent := path.Dir(p)
+			if parent == p {
+				break
+			}
+			p = parent
+			continue
+		}
+		if err != nil {
+			errorAdd(err)
+			break
 		}
 
-		return isDirGit(parent)
+		if !stat.IsDir() {
+			c, err := os.ReadFile(gitPath)
+			if err != nil {
+				errorAdd(err)
+				break
+			}
+			gitPath = path.Join(p, strings.TrimSpace(string(c)))
+		}
+
+		s.isGit = true
+		s.repos = append([]repos{{
+			name:    path.Base(p),
+			root:    p,
+			gitPath: gitPath,
+		}}, s.repos...)
+
+		if stat.IsDir() {
+			break
+		} else {
+			p = path.Dir(p)
+		}
 	}
-	return p, true
 }
 
 func gitBranch() string {
@@ -121,6 +158,7 @@ func gitBranch() string {
 
 	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
 	if err != nil {
+		errorAdd(err)
 		return "unknwn"
 	}
 
@@ -131,11 +169,13 @@ func gitBranch() string {
 
 	commit, err := exec.Command("git", "log", "--pretty=format:%h", "-n", "1").Output()
 	if err != nil {
+		errorAdd(err)
 		return "unknwn"
 	}
 
 	msgb, err := exec.Command("git", "log", "--pretty=format:%s", "-n", "1").Output()
 	if err != nil {
+		errorAdd(err)
 		return "unknwn"
 	}
 
@@ -151,11 +191,16 @@ func gitTag(repPath string) string {
 	defer measure("git tag", time.Now())
 
 	f, err := os.Open(filepath.Join(repPath, ".git/refs/tags"))
+	if os.IsNotExist(err) {
+		return ""
+	}
 	if err != nil {
+		errorAdd(err)
 		return ""
 	}
 	entries, err := f.ReadDir(100)
 	if err != nil {
+		errorAdd(err)
 		return ""
 	}
 	if len(entries) == 100 {
@@ -172,10 +217,13 @@ func gitRemote(branch string) string {
 	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}").Output()
 	if err == nil {
 		return strings.TrimSpace(string(out))
+	} else {
+		errorAdd(err)
 	}
 
 	out, err = exec.Command("git", "remote").Output()
 	if err != nil {
+		errorAdd(err)
 		return ""
 	}
 
@@ -192,6 +240,7 @@ func gitCommitMinus(branch string) int {
 
 	out, err := exec.Command("git", "log", "--oneline", fmt.Sprintf("..%s", branch)).Output()
 	if err != nil {
+		errorAdd(err)
 		return 0
 	}
 
@@ -204,6 +253,7 @@ func gitCommitPlus(branch string) int {
 
 	out, err := exec.Command("git", "log", "--oneline", fmt.Sprintf("%s..", branch)).Output()
 	if err != nil {
+		errorAdd(err)
 		return 0
 	}
 
@@ -216,6 +266,7 @@ func gitWtStatus() (added, modified, untracked, conflict int) {
 
 	out, err := exec.Command("git", "status", "--porcelain").Output()
 	if err != nil {
+		errorAdd(err)
 		return
 	}
 
@@ -248,19 +299,14 @@ NextLine:
 	return
 }
 
-func gitInfo(cwd string) gitStatus {
+func gitInfo(cwd string) *gitStatus {
 	defer measure("git", time.Now())
 
-	status := gitStatus{}
-
-	repPath, isGit := isDirGit(cwd)
-	if !isGit {
+	status := &gitStatus{}
+	status.fillRepos(cwd)
+	if !status.isGit {
 		return status
 	}
-
-	status.repositoryName = path.Base(repPath)
-	status.repositoryRoot = repPath
-	status.isGit = isGit
 
 	var wg sync.WaitGroup
 
@@ -268,7 +314,7 @@ func gitInfo(cwd string) gitStatus {
 	go func() {
 		defer wg.Done()
 		status.branch = gitBranch()
-		status.tag = gitTag(repPath)
+		status.tag = gitTag(status.repos[len(status.repos)-1].gitPath)
 		remoteBranch := gitRemote(status.branch)
 
 		var wg2 sync.WaitGroup

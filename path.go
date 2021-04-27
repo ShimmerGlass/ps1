@@ -66,13 +66,9 @@ func newPrettyPath(path, from string) prettyPath {
 func getCwd() string {
 	defer measure("cwd", time.Now())
 
-	cwd, ok := os.LookupEnv("PWD")
-	if ok {
-		return cwd
-	}
-
 	cwd, err := os.Getwd()
 	if err != nil {
+		errorAdd(err)
 		return ""
 	}
 

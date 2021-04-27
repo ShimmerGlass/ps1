@@ -12,12 +12,17 @@ func rubyVersion(base string) (res []string) {
 	defer measure("ruby", time.Now())
 
 	_, err := os.Stat(filepath.Join(base, "Gemfile"))
+	if os.IsNotExist(err) {
+		return
+	}
 	if err != nil {
+		errorAdd(err)
 		return
 	}
 
 	out, err := exec.Command("ruby", "-v").Output()
 	if err != nil {
+		errorAdd(err)
 		return
 	}
 

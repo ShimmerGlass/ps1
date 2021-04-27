@@ -12,12 +12,17 @@ func goVersion(base string) (res []string) {
 	defer measure("go", time.Now())
 
 	_, err := os.Stat(filepath.Join(base, "go.mod"))
+	if os.IsNotExist(err) {
+		return
+	}
 	if err != nil {
+		errorAdd(err)
 		return
 	}
 
 	out, err := exec.Command("go", "version").Output()
 	if err != nil {
+		errorAdd(err)
 		return
 	}
 

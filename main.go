@@ -28,7 +28,7 @@ func main() {
 
 	var cwdBase string
 	if gitInfo.isGit {
-		cwdBase = gitInfo.repositoryRoot
+		cwdBase = gitInfo.repos[0].root
 	} else {
 		cwdBase = home()
 	}
@@ -37,7 +37,7 @@ func main() {
 
 	if !why {
 		if gitInfo.isGit {
-			fmt.Print(title(gitInfo.repositoryName))
+			fmt.Print(title(gitInfo.repos[0].name))
 		} else {
 			fmt.Print(title(prettyPath.string()))
 		}
@@ -49,17 +49,19 @@ func main() {
 
 	if gitInfo.isGit {
 		parts = append(parts, gitInfo.infos()...)
-		parts = append(parts, rubyVersion(gitInfo.repositoryRoot)...)
-		parts = append(parts, goVersion(gitInfo.repositoryRoot)...)
+		parts = append(parts, rubyVersion(gitInfo.repos[len(gitInfo.repos)-1].root)...)
+		parts = append(parts, goVersion(gitInfo.repos[len(gitInfo.repos)-1].root)...)
 	}
 
 	parts = append(parts, prettyPath.print()...)
 	parts = append(parts, ssh()...)
+	parts = append(parts, errorCount()...)
 	parts = append(parts, prompt()...)
 
 	if !why {
 		fmt.Print(strings.Join(parts, " ") + " ")
 	} else {
 		printDebugTimes()
+		printErrors()
 	}
 }

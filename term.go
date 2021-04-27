@@ -34,6 +34,7 @@ func (c colorCode) String() string {
 func (c *colorCode) Set(s string) error {
 	v, err := rgbTo256(s)
 	if err != nil {
+		errorAdd(err)
 		return err
 	}
 
@@ -129,6 +130,7 @@ func rgbTo256(hex string) (colorCode, error) {
 	var r, g, b uint8
 	_, err := fmt.Sscanf(hex, "#%02x%02x%02x", &r, &g, &b)
 	if err != nil {
+		errorAdd(err)
 		return "", err
 	}
 
