@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"sync"
+	"time"
 )
 
 var errors []error
@@ -25,5 +26,25 @@ func errorCount() (res []string) {
 func printErrors() {
 	for _, err := range errors {
 		fmt.Println(err.Error())
+	}
+}
+
+type debugTime struct {
+	Label    string
+	Duration time.Duration
+}
+
+var debugTimes []debugTime
+
+func measure(label string, since time.Time) {
+	debugTimes = append(debugTimes, debugTime{
+		Label:    label,
+		Duration: time.Since(since),
+	})
+}
+
+func printDebugTimes() {
+	for _, d := range debugTimes {
+		fmt.Println(d.Label, "\t", d.Duration)
 	}
 }

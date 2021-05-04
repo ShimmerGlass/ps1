@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -156,35 +155,22 @@ func (s *gitStatus) fillRepos(p string) {
 func gitBranch() string {
 	defer measure("git branch", time.Now())
 
-	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
+	res, err := run("git", "rev-parse", "--abbrev-ref", "HEAD")
 	if err != nil {
 		errorAdd(err)
 		return "unknwn"
 	}
-
-	res := strings.TrimSpace(string(out))
 	if res != "HEAD" {
 		return res
 	}
 
-	commit, err := exec.Command("git", "log", "--pretty=format:%h", "-n", "1").Output()
+	commit, err := run("git", "log", "--pretty=format:%h", "-n", "1")
 	if err != nil {
 		errorAdd(err)
 		return "unknwn"
 	}
 
-	msgb, err := exec.Command("git", "log", "--pretty=format:%s", "-n", "1").Output()
-	if err != nil {
-		errorAdd(err)
-		return "unknwn"
-	}
-
-	msg := strings.TrimSpace(string(msgb))
-	if len(msg) > 20 {
-		msg = msg[:20]
-	}
-
-	return strings.TrimSpace(string(commit)) + "(" + msg + ")"
+	return commit
 }
 
 func gitTag(repPath string) string {
@@ -207,27 +193,31 @@ func gitTag(repPath string) string {
 		return "?"
 	}
 
-	tagOut, _ := exec.Command("git", "describe", "--exact-match", "--tags").Output()
-	return strings.TrimSpace(string(tagOut))
+	tagOut, err := run("git", "describe", "--exact-match", "--tags")
+	if err != nil {
+		errorAdd(err)
+		return ""
+	}
+	return tagOut
 }
 
 func gitRemote(branch string) string {
 	defer measure("git remote", time.Now())
 
-	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}").Output()
-	if err == nil {
-		return strings.TrimSpace(string(out))
-	} else {
+	out, err := run("git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")
+	if err != nil {
 		errorAdd(err)
+	} else {
+		return out
 	}
 
-	out, err = exec.Command("git", "remote").Output()
+	out, err = run("git", "remote")
 	if err != nil {
 		errorAdd(err)
 		return ""
 	}
 
-	lines := strings.Split(string(out), "\n")
+	lines := strings.Split(out, "\n")
 	if len(lines) == 0 {
 		return ""
 	}
@@ -238,39 +228,45 @@ func gitRemote(branch string) string {
 func gitCommitMinus(branch string) int {
 	defer measure("git commit-", time.Now())
 
-	out, err := exec.Command("git", "log", "--oneline", fmt.Sprintf("..%s", branch)).Output()
+	out, err := run("git", "log", "--oneline", fmt.Sprintf("..%s", branch))
 	if err != nil {
 		errorAdd(err)
 		return 0
 	}
+	if out == "" {
+		return 0
+	}
 
-	lines := strings.Split(string(out), "\n")
-	return len(lines) - 1
+	lines := strings.Split(out, "\n")
+	return len(lines)
 }
 
 func gitCommitPlus(branch string) int {
 	defer measure("git commit+", time.Now())
 
-	out, err := exec.Command("git", "log", "--oneline", fmt.Sprintf("%s..", branch)).Output()
+	out, err := run("git", "log", "--oneline", fmt.Sprintf("%s..", branch))
 	if err != nil {
 		errorAdd(err)
 		return 0
 	}
+	if out == "" {
+		return 0
+	}
 
-	lines := strings.Split(string(out), "\n")
-	return len(lines) - 1
+	lines := strings.Split(out, "\n")
+	return len(lines)
 }
 
 func gitWtStatus() (added, modified, untracked, conflict int) {
 	defer measure("git status", time.Now())
 
-	out, err := exec.Command("git", "status", "--porcelain").Output()
+	out, err := run("git", "status", "--porcelain")
 	if err != nil {
 		errorAdd(err)
 		return
 	}
 
-	lines := strings.Split(string(out), "\n")
+	lines := strings.Split(out, "\n")
 NextLine:
 	for _, l := range lines {
 		if len(l) < 2 {
@@ -286,8 +282,10 @@ NextLine:
 		switch l[1] {
 		case 'M', 'U', 'R', 'D':
 			modified++
+			continue NextLine
 		case '?':
 			untracked++
+			continue NextLine
 		}
 
 		switch l[0] {

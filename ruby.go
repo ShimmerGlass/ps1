@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -20,13 +19,13 @@ func rubyVersion(base string) (res []string) {
 		return
 	}
 
-	out, err := exec.Command("ruby", "-v").Output()
+	out, err := run("ruby", "-v")
 	if err != nil {
 		errorAdd(err)
 		return
 	}
 
-	p := strings.Split(string(out), " ")
+	p := strings.Split(out, " ")
 	if len(p) < 2 {
 		return
 	}
