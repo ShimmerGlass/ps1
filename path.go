@@ -13,12 +13,15 @@ type prettyPath struct {
 }
 
 func (p *prettyPath) print() (res []string) {
-	parts := p.ok
+	parts := []string{}
+	for _, p := range p.ok {
+		parts = append(parts, color(p, Cyan, false))
+	}
 	for _, p := range p.missing {
 		parts = append(parts, color(p, Red, false))
 	}
 
-	res = append(res, color(strings.Join(parts, color("/", Cyan, false)), Cyan, false))
+	res = append(res, strings.Join(parts, color("/", Black, false)))
 	return
 }
 

@@ -205,9 +205,7 @@ func gitRemote(branch string) string {
 	defer measure("git remote", time.Now())
 
 	out, err := run("git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")
-	if err != nil {
-		errorAdd(err)
-	} else {
+	if err == nil {
 		return out
 	}
 
