@@ -39,10 +39,7 @@ func (s gitStatus) infos() (res []string) {
 		names = append(names, color(r.name, Accent, true))
 	}
 
-	res = append(res,
-		strings.Join(names, color("/", Neutral, false)),
-		color("∙", Neutral, false),
-	)
+	res = append(res, strings.Join(names, color("/", Neutral, false)))
 
 	branchColor := Success
 	switch {
@@ -54,15 +51,12 @@ func (s gitStatus) infos() (res []string) {
 		branchColor = Purple
 	}
 
+	res = append(res, color(s.branch, branchColor, false))
 	head := ""
-	head += color(s.branch, branchColor, false)
 	if s.tag != "" {
-		head += color("∙", Neutral, false)
 		head += color(s.tag, Text, false)
 	}
 	if s.commitMinus > 0 || s.commitPlus > 0 {
-		head += color("{", Neutral, false)
-
 		if s.commitPlus > 0 {
 			head += color("↑", Neutral, false)
 			head += color(strconv.Itoa(s.commitPlus), Green, true)
@@ -72,16 +66,14 @@ func (s gitStatus) infos() (res []string) {
 			head += color("↓", Neutral, false)
 			head += color(strconv.Itoa(s.commitMinus), Blue, true)
 		}
-
-		head += color("}", Neutral, false)
 	}
 
-	res = append(res, head)
+	if head != "" {
+		res = append(res, head)
+	}
 
 	tree := ""
 	if s.wtAdded > 0 || s.wtModified > 0 || s.wtUntracked > 0 || s.wtConflict > 0 {
-		tree += color("{", Neutral, false)
-
 		parts := []string{}
 
 		if s.wtAdded > 0 {
@@ -98,8 +90,6 @@ func (s gitStatus) infos() (res []string) {
 		}
 
 		tree += strings.Join(parts, color(".", Neutral, false))
-
-		tree += color("}", Neutral, false)
 	}
 
 	if tree != "" {
@@ -209,6 +199,16 @@ func gitRemote(branch string) string {
 		return out
 	}
 
+	out, err = run("git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "HEAD")
+	if err != nil {
+		errorAdd(err)
+		return ""
+	}
+
+	if out == "HEAD" {
+		return ""
+	}
+
 	out, err = run("git", "remote")
 	if err != nil {
 		errorAdd(err)
@@ -313,22 +313,24 @@ func gitInfo(cwd string) *gitStatus {
 		status.tag = gitTag(status.repos[len(status.repos)-1].gitPath)
 		remoteBranch := gitRemote(status.branch)
 
-		var wg2 sync.WaitGroup
+		if remoteBranch != "" {
+			var wg2 sync.WaitGroup
 
-		wg2.Add(1)
-		go func() {
-			defer wg2.Done()
-			status.commitMinus = gitCommitMinus(remoteBranch)
+			wg2.Add(1)
+			go func() {
+				defer wg2.Done()
+				status.commitMinus = gitCommitMinus(remoteBranch)
 
-		}()
+			}()
 
-		wg2.Add(1)
-		go func() {
-			defer wg2.Done()
-			status.commitPlus = gitCommitPlus(remoteBranch)
-		}()
+			wg2.Add(1)
+			go func() {
+				defer wg2.Done()
+				status.commitPlus = gitCommitPlus(remoteBranch)
+			}()
 
-		wg2.Wait()
+			wg2.Wait()
+		}
 	}()
 
 	wg.Add(1)

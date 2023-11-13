@@ -48,18 +48,18 @@ func main() {
 	parts = append(parts, jobs()...)
 
 	if gitInfo.isGit {
+		lastRepos := gitInfo.repos[len(gitInfo.repos)-1]
 		parts = append(parts, gitInfo.infos()...)
-		parts = append(parts, rubyVersion(gitInfo.repos[len(gitInfo.repos)-1].root)...)
-		parts = append(parts, goVersion(gitInfo.repos[len(gitInfo.repos)-1].root)...)
+		parts = append(parts, versions(lastRepos.root)...)
 	}
 
-	parts = append(parts, prettyPath.print()...)
 	parts = append(parts, ssh()...)
 	parts = append(parts, errorCount()...)
-	parts = append(parts, prompt()...)
 
 	if !why {
-		fmt.Print(strings.Join(parts, " ") + " ")
+		fmt.Print(strings.Join(parts, color("⋮ ", Neutral, false)) + " ")
+		fmt.Print(strings.Join(prettyPath.print(), " ") + " ")
+		fmt.Print(strings.Join(prompt(), " ") + " ")
 	} else {
 		printDebugTimes()
 		printErrors()
