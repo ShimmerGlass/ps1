@@ -145,12 +145,12 @@ func (s *gitStatus) fillRepos(p string) {
 func gitBranch() string {
 	defer measure("git branch", time.Now())
 
-	res, err := run("git", "rev-parse", "--abbrev-ref", "HEAD")
+	res, err := run("git", "branch", "--show-current")
 	if err != nil {
 		errorAdd(err)
 		return "unknwn"
 	}
-	if res != "HEAD" {
+	if res != "" {
 		return res
 	}
 
@@ -201,7 +201,6 @@ func gitRemote(branch string) string {
 
 	out, err = run("git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "HEAD")
 	if err != nil {
-		errorAdd(err)
 		return ""
 	}
 
@@ -280,7 +279,7 @@ NextLine:
 		switch l[1] {
 		case 'M', 'U', 'R', 'D':
 			modified++
-			continue NextLine
+
 		case '?':
 			untracked++
 			continue NextLine
