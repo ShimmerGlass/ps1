@@ -74,7 +74,9 @@ func goVersion(base string) (res []string) {
 		return
 	}
 
-	v := strings.Replace(p[2], "go", "", 1)
+	versionParts := strings.Split(p[2], ".")
+
+	v := strings.Replace(strings.Join(versionParts[:min(len(versionParts), 2)], "."), "go", "", 1)
 
 	res = append(res, color(strings.TrimSpace(v), mustRgbTo256("#67D0DE"), false))
 	return

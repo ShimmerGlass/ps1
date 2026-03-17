@@ -29,8 +29,8 @@ type gitStatus struct {
 	wtUntracked int
 	wtConflict  int
 
-	commitMinus int
-	commitPlus  int
+	commitMinus string
+	commitPlus  string
 }
 
 func (s gitStatus) infos() (res []string) {
@@ -56,15 +56,19 @@ func (s gitStatus) infos() (res []string) {
 	if s.tag != "" {
 		head += color(s.tag, Text, false)
 	}
-	if s.commitMinus > 0 || s.commitPlus > 0 {
-		if s.commitPlus > 0 {
-			head += color("↑", Neutral, false)
-			head += color(strconv.Itoa(s.commitPlus), Green, true)
-		}
+	if s.commitMinus == "?" && s.commitPlus == "?" {
+		head += color("↕?", Yellow, true)
+	} else {
+		if s.commitMinus != "" || s.commitPlus != "" {
+			if s.commitPlus != "" {
+				head += color("↑", Neutral, false)
+				head += color(s.commitPlus, Green, true)
+			}
 
-		if s.commitMinus > 0 {
-			head += color("↓", Neutral, false)
-			head += color(strconv.Itoa(s.commitMinus), Blue, true)
+			if s.commitMinus != "" {
+				head += color("↓", Neutral, false)
+				head += color(s.commitMinus, Blue, true)
+			}
 		}
 	}
 
@@ -222,36 +226,34 @@ func gitRemote(branch string) string {
 	return lines[0] + "/" + branch
 }
 
-func gitCommitMinus(branch string) int {
+func gitCommitMinus(branch string) string {
 	defer measure("git commit-", time.Now())
 
 	out, err := run("git", "log", "--oneline", fmt.Sprintf("..%s", branch))
 	if err != nil {
-		errorAdd(err)
-		return 0
+		return "?"
 	}
 	if out == "" {
-		return 0
+		return ""
 	}
 
 	lines := strings.Split(out, "\n")
-	return len(lines)
+	return strconv.Itoa(len(lines))
 }
 
-func gitCommitPlus(branch string) int {
+func gitCommitPlus(branch string) string {
 	defer measure("git commit+", time.Now())
 
 	out, err := run("git", "log", "--oneline", fmt.Sprintf("%s..", branch))
 	if err != nil {
-		errorAdd(err)
-		return 0
+		return "?"
 	}
 	if out == "" {
-		return 0
+		return ""
 	}
 
 	lines := strings.Split(out, "\n")
-	return len(lines)
+	return strconv.Itoa(len(lines))
 }
 
 func gitWtStatus() (added, modified, untracked, conflict int) {
