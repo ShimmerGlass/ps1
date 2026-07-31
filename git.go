@@ -43,6 +43,8 @@ func (s gitStatus) infos() (res []string) {
 
 	branchColor := Success
 	switch {
+	case s.wtConflict > 0:
+		branchColor = Blue
 	case s.wtModified > 0:
 		branchColor = Danger
 	case s.wtAdded > 0:
@@ -225,32 +227,34 @@ func gitStatusPorcelain(s *gitStatus) {
 }
 
 // countStatus tallies a single porcelain v2 status line into the working-tree
-// counters, preserving the original v1 XY-code semantics.
+// counters: untracked ('?'), conflict (any 'u' line) or, for ordinary/renamed
+// changes, staged (X) and worktree (Y) modifications from the XY code.
 func (s *gitStatus) countStatus(l string) {
-	var xy string
 	switch l[0] {
 	case '?':
 		s.wtUntracked++
 		return
+	case 'u':
+		// Every 'u' line is an unmerged path, i.e. a conflict, regardless of
+		// its XY code (UU, AA, DD, AU, UD, UA, DU).
+		s.wtConflict++
+		return
 	case '!':
 		return
-	case '1', '2', 'u':
-		fields := strings.SplitN(l, " ", 3)
-		if len(fields) < 2 || len(fields[1]) < 2 {
-			return
-		}
-		xy = fields[1]
+	case '1', '2':
+		// Ordinary or renamed change, handled below.
 	default:
 		return
 	}
 
-	if xy == "UU" {
-		s.wtConflict++
+	fields := strings.SplitN(l, " ", 3)
+	if len(fields) < 2 || len(fields[1]) < 2 {
 		return
 	}
+	xy := fields[1]
 
 	switch xy[1] {
-	case 'M', 'U', 'R', 'D':
+	case 'M', 'R', 'D':
 		s.wtModified++
 	}
 	switch xy[0] {
