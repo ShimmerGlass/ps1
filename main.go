@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"flag"
 )
@@ -24,7 +25,33 @@ func main() {
 	}
 
 	cwd := getCwd()
-	gitInfo := gitInfo(cwd)
+
+	// fillRepos is a couple of stat() calls, so resolving the repo root up
+	// front is cheap and lets git status and version detection (both several
+	// milliseconds of subprocess time) run concurrently instead of in series.
+	gitInfo := &gitStatus{}
+	gitInfo.fillRepos(cwd)
+
+	var wg sync.WaitGroup
+	var verParts []string
+
+	if gitInfo.isGit {
+		root := gitInfo.repos[len(gitInfo.repos)-1].root
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			gitInfo.fillGit()
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			verParts = versions(root)
+		}()
+	}
+
+	wg.Wait()
 
 	var cwdBase string
 	if gitInfo.isGit {
@@ -48,9 +75,8 @@ func main() {
 	parts = append(parts, jobs()...)
 
 	if gitInfo.isGit {
-		lastRepos := gitInfo.repos[len(gitInfo.repos)-1]
 		parts = append(parts, gitInfo.infos()...)
-		parts = append(parts, versions(lastRepos.root)...)
+		parts = append(parts, verParts...)
 	}
 
 	parts = append(parts, ssh()...)

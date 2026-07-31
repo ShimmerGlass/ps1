@@ -35,12 +35,17 @@ type debugTime struct {
 }
 
 var debugTimes []debugTime
+var debugTimesLock sync.Mutex
 
 func measure(label string, since time.Time) {
-	debugTimes = append(debugTimes, debugTime{
+	d := debugTime{
 		Label:    label,
 		Duration: time.Since(since),
-	})
+	}
+
+	debugTimesLock.Lock()
+	debugTimes = append(debugTimes, d)
+	debugTimesLock.Unlock()
 }
 
 func printDebugTimes() {

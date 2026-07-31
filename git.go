@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"bufio"
 	"os"
 	"path"
 	"path/filepath"
@@ -128,7 +128,14 @@ func (s *gitStatus) fillRepos(p string) {
 				errorAdd(err)
 				break
 			}
-			gitPath = path.Join(p, strings.TrimSpace(string(c)))
+			// A .git file (submodule / linked worktree) points at the real git
+			// directory as "gitdir: <path>", where <path> may be relative to p.
+			dir := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(string(c)), "gitdir:"))
+			if filepath.IsAbs(dir) {
+				gitPath = dir
+			} else {
+				gitPath = filepath.Join(p, dir)
+			}
 		}
 
 		s.isGit = true
@@ -146,202 +153,180 @@ func (s *gitStatus) fillRepos(p string) {
 	}
 }
 
-func gitBranch() string {
-	defer measure("git branch", time.Now())
+// gitStatusPorcelain gathers branch, upstream tracking (ahead/behind) and
+// working-tree status in a single `git status` invocation instead of the five
+// separate git subprocesses this used to spawn.
+func gitStatusPorcelain(s *gitStatus) {
+	defer measure("git status", time.Now())
 
-	res, err := run("git", "branch", "--show-current")
+	out, err := run("git", "status", "--porcelain=v2", "--branch")
 	if err != nil {
 		errorAdd(err)
-		return "unknwn"
-	}
-	if res != "" {
-		return res
+		s.branch = "unknwn"
+		return
 	}
 
-	commit, err := run("git", "log", "--pretty=format:%h", "-n", "1")
-	if err != nil {
-		errorAdd(err)
-		return "unknwn"
+	var oid string
+	hasUpstream := false
+	hasAB := false
+
+	for _, l := range strings.Split(out, "\n") {
+		if l == "" {
+			continue
+		}
+
+		if l[0] == '#' {
+			fields := strings.SplitN(l, " ", 3)
+			if len(fields) < 3 {
+				continue
+			}
+			switch fields[1] {
+			case "branch.oid":
+				oid = fields[2]
+			case "branch.head":
+				if fields[2] != "(detached)" {
+					s.branch = fields[2]
+				}
+			case "branch.upstream":
+				hasUpstream = true
+			case "branch.ab":
+				hasAB = true
+				ab := strings.Fields(fields[2])
+				if len(ab) == 2 {
+					if ahead := strings.TrimPrefix(ab[0], "+"); ahead != "0" {
+						s.commitPlus = ahead
+					}
+					if behind := strings.TrimPrefix(ab[1], "-"); behind != "0" {
+						s.commitMinus = behind
+					}
+				}
+			}
+			continue
+		}
+
+		s.countStatus(l)
 	}
 
-	return commit
+	// Detached HEAD: show the short commit hash, like the old fallback did.
+	if s.branch == "" {
+		if len(oid) >= 7 {
+			s.branch = oid[:7]
+		} else {
+			s.branch = "unknwn"
+		}
+	}
+
+	// Upstream is configured but git couldn't compute ahead/behind (e.g. the
+	// upstream is gone): surface it as the "↕?" unknown marker, as before.
+	if hasUpstream && !hasAB {
+		s.commitPlus = "?"
+		s.commitMinus = "?"
+	}
 }
 
-func gitTag(repPath string) string {
+// countStatus tallies a single porcelain v2 status line into the working-tree
+// counters, preserving the original v1 XY-code semantics.
+func (s *gitStatus) countStatus(l string) {
+	var xy string
+	switch l[0] {
+	case '?':
+		s.wtUntracked++
+		return
+	case '!':
+		return
+	case '1', '2', 'u':
+		fields := strings.SplitN(l, " ", 3)
+		if len(fields) < 2 || len(fields[1]) < 2 {
+			return
+		}
+		xy = fields[1]
+	default:
+		return
+	}
+
+	if xy == "UU" {
+		s.wtConflict++
+		return
+	}
+
+	switch xy[1] {
+	case 'M', 'U', 'R', 'D':
+		s.wtModified++
+	}
+	switch xy[0] {
+	case 'A', 'M', 'R', 'D':
+		s.wtAdded++
+	}
+}
+
+func gitTag(gitDir string) string {
 	defer measure("git tag", time.Now())
 
-	f, err := os.Open(filepath.Join(repPath, ".git/refs/tags"))
-	if os.IsNotExist(err) {
+	if !hasTags(gitDir) {
 		return ""
-	}
-	if err != nil {
-		errorAdd(err)
-		return ""
-	}
-	entries, err := f.ReadDir(100)
-	if err != nil {
-		errorAdd(err)
-		return ""
-	}
-	if len(entries) == 100 {
-		return "?"
 	}
 
 	tagOut, err := run("git", "describe", "--exact-match", "--tags")
 	if err != nil {
-		errorAdd(err)
+		// A non-zero exit here means HEAD isn't exactly on a tag — the common
+		// case, not a failure worth reporting.
 		return ""
 	}
 	return tagOut
 }
 
-func gitRemote(branch string) string {
-	defer measure("git remote", time.Now())
-
-	out, err := run("git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")
-	if err == nil {
-		return out
-	}
-
-	out, err = run("git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "HEAD")
-	if err != nil {
-		return ""
-	}
-
-	if out == "HEAD" {
-		return ""
-	}
-
-	out, err = run("git", "remote")
-	if err != nil {
-		errorAdd(err)
-		return ""
-	}
-
-	lines := strings.Split(out, "\n")
-	if len(lines) == 0 {
-		return ""
-	}
-
-	return lines[0] + "/" + branch
-}
-
-func gitCommitMinus(branch string) string {
-	defer measure("git commit-", time.Now())
-
-	out, err := run("git", "log", "--oneline", fmt.Sprintf("..%s", branch))
-	if err != nil {
-		return "?"
-	}
-	if out == "" {
-		return ""
-	}
-
-	lines := strings.Split(out, "\n")
-	return strconv.Itoa(len(lines))
-}
-
-func gitCommitPlus(branch string) string {
-	defer measure("git commit+", time.Now())
-
-	out, err := run("git", "log", "--oneline", fmt.Sprintf("%s..", branch))
-	if err != nil {
-		return "?"
-	}
-	if out == "" {
-		return ""
-	}
-
-	lines := strings.Split(out, "\n")
-	return strconv.Itoa(len(lines))
-}
-
-func gitWtStatus() (added, modified, untracked, conflict int) {
-	defer measure("git status", time.Now())
-
-	out, err := run("git", "status", "--porcelain")
-	if err != nil {
-		errorAdd(err)
-		return
-	}
-
-	lines := strings.Split(out, "\n")
-NextLine:
-	for _, l := range lines {
-		if len(l) < 2 {
-			continue
-		}
-
-		switch l[:2] {
-		case "UU":
-			conflict++
-			continue NextLine
-		}
-
-		switch l[1] {
-		case 'M', 'U', 'R', 'D':
-			modified++
-
-		case '?':
-			untracked++
-			continue NextLine
-		}
-
-		switch l[0] {
-		case 'A', 'M', 'R', 'D':
-			added++
+// hasTags reports whether the repository has any tags, checking both loose and
+// packed refs. gitDir is the repository's git directory; for a linked worktree
+// its refs live in the shared common directory named by the commondir file.
+func hasTags(gitDir string) bool {
+	commonDir := gitDir
+	if c, err := os.ReadFile(filepath.Join(gitDir, "commondir")); err == nil {
+		if cd := strings.TrimSpace(string(c)); cd != "" {
+			if filepath.IsAbs(cd) {
+				commonDir = cd
+			} else {
+				commonDir = filepath.Join(gitDir, cd)
+			}
 		}
 	}
 
-	return
+	if entries, err := os.ReadDir(filepath.Join(commonDir, "refs", "tags")); err == nil && len(entries) > 0 {
+		return true
+	}
+
+	f, err := os.Open(filepath.Join(commonDir, "packed-refs"))
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		if strings.Contains(sc.Text(), " refs/tags/") {
+			return true
+		}
+	}
+	return false
 }
 
-func gitInfo(cwd string) *gitStatus {
+// fillGit runs the working-tree status and tag lookup concurrently. It assumes
+// fillRepos has already run and reported a git repository.
+func (s *gitStatus) fillGit() {
 	defer measure("git", time.Now())
-
-	status := &gitStatus{}
-	status.fillRepos(cwd)
-	if !status.isGit {
-		return status
-	}
 
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		status.branch = gitBranch()
-		status.tag = gitTag(status.repos[len(status.repos)-1].gitPath)
-		remoteBranch := gitRemote(status.branch)
-
-		if remoteBranch != "" {
-			var wg2 sync.WaitGroup
-
-			wg2.Add(1)
-			go func() {
-				defer wg2.Done()
-				status.commitMinus = gitCommitMinus(remoteBranch)
-
-			}()
-
-			wg2.Add(1)
-			go func() {
-				defer wg2.Done()
-				status.commitPlus = gitCommitPlus(remoteBranch)
-			}()
-
-			wg2.Wait()
-		}
+		gitStatusPorcelain(s)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-
-		status.wtAdded, status.wtModified, status.wtUntracked, status.wtConflict = gitWtStatus()
+		s.tag = gitTag(s.repos[len(s.repos)-1].gitPath)
 	}()
 
 	wg.Wait()
-
-	return status
 }

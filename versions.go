@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -14,8 +15,20 @@ var versionned = []func(string) []string{
 }
 
 func versions(root string) (res []string) {
-	for _, ver := range versionned {
-		res = append(res, ver(root)...)
+	out := make([][]string, len(versionned))
+
+	var wg sync.WaitGroup
+	for i, ver := range versionned {
+		wg.Add(1)
+		go func(i int, ver func(string) []string) {
+			defer wg.Done()
+			out[i] = ver(root)
+		}(i, ver)
+	}
+	wg.Wait()
+
+	for _, r := range out {
+		res = append(res, r...)
 	}
 
 	return
