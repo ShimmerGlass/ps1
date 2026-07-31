@@ -83,6 +83,19 @@ func colorRst() string {
 	return escStart() + string(rst) + escEnd()
 }
 
+// link wraps text in an OSC-8 hyperlink to url. The escape bytes are wrapped in
+// the shell's zero-width markers so prompt width stays correct; terminals that
+// don't support OSC-8 simply render text unchanged.
+func link(url, text string) string {
+	if url == "" {
+		return text
+	}
+
+	open := escStart() + "\x1B]8;;" + url + "\x07" + escEnd()
+	close := escStart() + "\x1B]8;;\x07" + escEnd()
+	return open + text + close
+}
+
 func title(title string) string {
 	return fmt.Sprintf("%s\x1B]0;%s\x07%s", escStart(), title, escEnd())
 }

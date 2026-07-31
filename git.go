@@ -31,6 +31,8 @@ type gitStatus struct {
 
 	commitMinus string
 	commitPlus  string
+
+	remoteWeb string
 }
 
 func (s gitStatus) infos() (res []string) {
@@ -53,7 +55,15 @@ func (s gitStatus) infos() (res []string) {
 		branchColor = Purple
 	}
 
-	res = append(res, color(s.branch, branchColor, false))
+	branchStr := color(s.branch, branchColor, false)
+	if s.remoteWeb != "" {
+		treePath := "/tree/"
+		if strings.Contains(s.remoteWeb, "gitlab") {
+			treePath = "/-/tree/"
+		}
+		branchStr = link(s.remoteWeb+treePath+s.branch, branchStr)
+	}
+	res = append(res, branchStr)
 	head := ""
 	if s.tag != "" {
 		head += color(s.tag, Text, false)
@@ -283,16 +293,7 @@ func gitTag(gitDir string) string {
 // packed refs. gitDir is the repository's git directory; for a linked worktree
 // its refs live in the shared common directory named by the commondir file.
 func hasTags(gitDir string) bool {
-	commonDir := gitDir
-	if c, err := os.ReadFile(filepath.Join(gitDir, "commondir")); err == nil {
-		if cd := strings.TrimSpace(string(c)); cd != "" {
-			if filepath.IsAbs(cd) {
-				commonDir = cd
-			} else {
-				commonDir = filepath.Join(gitDir, cd)
-			}
-		}
-	}
+	commonDir := gitCommonDir(gitDir)
 
 	if entries, err := os.ReadDir(filepath.Join(commonDir, "refs", "tags")); err == nil && len(entries) > 0 {
 		return true
@@ -313,6 +314,92 @@ func hasTags(gitDir string) bool {
 	return false
 }
 
+// gitCommonDir returns the shared git directory for gitDir. For a linked
+// worktree that is the directory named by its commondir file; otherwise gitDir
+// itself.
+func gitCommonDir(gitDir string) string {
+	if c, err := os.ReadFile(filepath.Join(gitDir, "commondir")); err == nil {
+		if cd := strings.TrimSpace(string(c)); cd != "" {
+			if filepath.IsAbs(cd) {
+				return cd
+			}
+			return filepath.Join(gitDir, cd)
+		}
+	}
+	return gitDir
+}
+
+// remoteWebURL derives an https base URL (e.g. https://github.com/owner/repo)
+// for the repository's remote, preferring "origin". It returns "" when there is
+// no usable remote. The git config is read directly to avoid a subprocess.
+func remoteWebURL(gitDir string) string {
+	data, err := os.ReadFile(filepath.Join(gitCommonDir(gitDir), "config"))
+	if err != nil {
+		return ""
+	}
+
+	urls := map[string]string{}
+	section := ""
+	for _, raw := range strings.Split(string(data), "\n") {
+		line := strings.TrimSpace(raw)
+		if strings.HasPrefix(line, "[") {
+			section = ""
+			if name, ok := strings.CutPrefix(line, `[remote "`); ok {
+				section, _, _ = strings.Cut(name, `"`)
+			}
+			continue
+		}
+		if section != "" {
+			if k, v, ok := strings.Cut(line, "="); ok && strings.TrimSpace(k) == "url" {
+				urls[section] = strings.TrimSpace(v)
+			}
+		}
+	}
+
+	remote := urls["origin"]
+	if remote == "" {
+		for _, v := range urls {
+			remote = v
+			break
+		}
+	}
+
+	return toWebURL(remote)
+}
+
+// toWebURL converts a git remote (scp-like git@host:path, or a
+// scheme://[user@]host/path URL) into an https browse URL, or "" if it can't.
+func toWebURL(remote string) string {
+	remote = strings.TrimSuffix(strings.TrimSpace(remote), ".git")
+	if remote == "" {
+		return ""
+	}
+
+	if !strings.Contains(remote, "://") {
+		// scp-like: [user@]host:owner/repo
+		if at := strings.LastIndex(remote, "@"); at != -1 {
+			remote = remote[at+1:]
+		}
+		host, path, ok := strings.Cut(remote, ":")
+		if !ok || host == "" || path == "" {
+			return ""
+		}
+		return "https://" + host + "/" + strings.TrimPrefix(path, "/")
+	}
+
+	// scheme://[user@]host/path
+	_, rest, _ := strings.Cut(remote, "://")
+	if slash := strings.Index(rest, "/"); slash != -1 {
+		if at := strings.Index(rest[:slash], "@"); at != -1 {
+			rest = rest[at+1:]
+		}
+	}
+	if rest == "" || !strings.Contains(rest, "/") {
+		return ""
+	}
+	return "https://" + rest
+}
+
 // fillGit runs the working-tree status and tag lookup concurrently. It assumes
 // fillRepos has already run and reported a git repository.
 func (s *gitStatus) fillGit() {
@@ -330,6 +417,12 @@ func (s *gitStatus) fillGit() {
 	go func() {
 		defer wg.Done()
 		s.tag = gitTag(s.repos[len(s.repos)-1].gitPath)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.remoteWeb = remoteWebURL(s.repos[len(s.repos)-1].gitPath)
 	}()
 
 	wg.Wait()
