@@ -80,6 +80,7 @@ func main() {
 	}
 
 	parts = append(parts, ssh()...)
+	parts = append(parts, cmdDuration()...)
 	parts = append(parts, errorCount()...)
 
 	if !why {

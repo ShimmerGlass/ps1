@@ -171,7 +171,7 @@ func (s *gitStatus) fillRepos(p string) {
 func gitStatusPorcelain(s *gitStatus) {
 	defer measure("git status", time.Now())
 
-	out, err := run("git", "status", "--porcelain=v2", "--branch")
+	out, err := run("git", "--no-optional-locks", "status", "--porcelain=v2", "--branch")
 	if err != nil {
 		errorAdd(err)
 		s.branch = "unknwn"
@@ -280,7 +280,7 @@ func gitTag(gitDir string) string {
 		return ""
 	}
 
-	tagOut, err := run("git", "describe", "--exact-match", "--tags")
+	tagOut, err := run("git", "--no-optional-locks", "describe", "--exact-match", "--tags")
 	if err != nil {
 		// A non-zero exit here means HEAD isn't exactly on a tag — the common
 		// case, not a failure worth reporting.
